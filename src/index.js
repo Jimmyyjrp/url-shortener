@@ -44,12 +44,9 @@ api.post('/shorten', async (req, res) => {
   if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
     return res.status(400).json({ error: 'Invalid URL' });
   }
-
-
+  // ฟีเจอร์ customcode: ให้ผู้ใช้กำหนด short URL เองได้ หรือสุ่ม code หากไม่ได้กำหนด
 const code = (req.body.customCode || randomCode(6)).toLowerCase();
 await redis.set(code, url);
-  const code = randomCode(6);
-  await redis.set(code, url);
 
   return res.status(200).json({ code, short: `/${code}` });
 });
@@ -57,6 +54,12 @@ await redis.set(code, url);
 api.get('/urls', async (req, res) => {
   const entries = await redis.list();
   return res.status(200).json(entries);
+});
+
+api.patch('/:code/toggle', async (req, res) => {
+  const enabled = await redis.toggle(req.params.code);
+  if (enabled === null) return res.status(404).json({ error: 'Not found' });
+  return res.status(200).json({ code: req.params.code, enabled });
 });
 
 api.delete('/:code', async (req, res) => {
